@@ -31,16 +31,15 @@ export async function POST(request: Request) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    const user = await User.findOne({email: normalizedEmail})
+    const user = await User.findOne({email: normalizedEmail});
 
     if (!user) {
         return NextResponse.json({
-            message: "User not found",
+            message: "Invalid credentials",
             success: false,
             data: null
-        }, { status: 400 });
+        }, { status: 401 });
     }
-
     const isVerified = await bcrypt.compare(password, user.password)
 
     if (!isVerified) {
@@ -53,14 +52,14 @@ export async function POST(request: Request) {
 
     const token = signToken({id: user._id});
 
+    const userObject = user.toObject();
+
+    delete userObject.password;
+
     const res = NextResponse.json({
         message: "User logged in successfully",
         success: true,
-        data: {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-        }
+        data: userObject,
     }, { status: 200 });
 
     res.cookies.set("token", token, {

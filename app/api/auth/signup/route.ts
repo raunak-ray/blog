@@ -4,74 +4,75 @@ import User from "@/model/User";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
+
 export async function POST(request: Request) {
-    await connectToDb();
-
-    let name, email, password;
     try {
-        ({ name, email, password } = await request.json());
-    } catch {
-        return NextResponse.json({
-            message: "Invalid JSON body",
-            success: false,
-            data: null
-        }, { status: 400 });
-    }
-    
-    if (!name || !email || !password) {
-        return NextResponse.json({
-            message: "All fields are required",
-            success: false,
-            data: null
-        }, { status: 400 });
-    }
+        await connectToDb();
 
-    if (password.length < 8) {
-        return NextResponse.json({
-            message: "Password must be at least 8 characters long",
-            success: false,
-            data: null
-        }, { status: 400 });
-    }
+        const {name, email, password} = await request.json()
 
-    const normalizedEmail = email.toLowerCase().trim();
-
-    const existingUser = await User.findOne({email: normalizedEmail})
-
-    if (existingUser) {
-        return NextResponse.json({
-            message: "User already exists",
-            success: false,
-            data: null
-        }, {status: 400})
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = await User.create({
-        name,
-        email: normalizedEmail,
-        password: hashedPassword
-    });
-
-    const token = signToken({id: newUser._id})
-
-    const res = NextResponse.json({
-        message: "User created successfully",
-        success: true,
-        data: {
-            id: newUser._id,
-            name: newUser.name,
-            email: newUser.email
+        if (!name || !email || !password) {
+            return NextResponse.json({
+                message: "Missing required fields",
+                success: false,
+                data: null 
+            }, { status: 400 });  
         }
-    }, {status: 201})
 
-    res.cookies.set("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        path: "/"
-    } )
+        if (password.length < 8) {
+            return NextResponse.json({
+                message: "Password must be at least 8 characters long",
+                success: false,
+                data: null
+            }, { status: 400 });
+        }
 
-    return res;
+        const normalizedEmail = email.toLowerCase().trim();
+
+        const existingUser = await User.findOne({email: normalizedEmail})
+
+        if (existingUser) {
+            return NextResponse.json({
+                message: "User already exists",
+                success: false,
+                data: null
+            }, {status: 400})
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newUser = await User.create({
+            name,
+            email,
+            password: hashedPassword
+        });
+
+        const token = signToken({id: newUser._id})
+
+        const userObject = newUser.toObject();
+
+        delete userObject.password;
+
+        const res = NextResponse.json({
+            message: "User created successfully",
+            success: true,
+            data: userObject
+        }, {status: 201})
+
+        res.cookies.set("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            path: "/"
+        } )
+
+        return res;
+    } catch (error) {
+        console.error("Signup error:", error);
+        return NextResponse.json({
+            message: "Internal server error",
+            success: false,
+            data: null
+        }, { status: 500 });
+    }
 }
