@@ -17,7 +17,16 @@ export async function POST(request: Request) {
             }, {status: 401})
         }
 
-        const body = await request.json();
+        let body;
+        try {
+            body = await request.json();
+        } catch {
+            return NextResponse.json({
+                message: "Invalid JSON body",
+                success: false,
+                data: null,
+            }, { status: 400 });
+        }
 
         const {title, content, coverImage, category, tags} = body;
 
@@ -28,7 +37,6 @@ export async function POST(request: Request) {
                 data: null,
             }, {status: 400})
         }
-
         const blog = await Blog.create({
             title,
             content,

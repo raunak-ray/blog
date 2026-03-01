@@ -20,9 +20,9 @@ const blogSchema = new mongoose.Schema({
         lowercase: true,
     },
     tags: {
-        type: [String],
+        type: [{type: String, lowercase: true}],
         default: [],
-        lowercase: true,
+        
     },
     author: {
         type: Schema.Types.ObjectId,
